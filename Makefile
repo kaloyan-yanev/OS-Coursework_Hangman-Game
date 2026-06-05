@@ -1,7 +1,7 @@
 CC      = gcc
 CFLAGS  = -Wall -Wextra -O2 -std=c11
-COMMON  = game.c net-serv.c
-HEADERS = game.h net-serv.h
+COMMON  = game.c net-lib.c
+HEADERS = game.h net-lib.h
 
 all: hangman-server hangman-client
 

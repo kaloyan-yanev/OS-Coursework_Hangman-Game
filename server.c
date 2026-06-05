@@ -27,7 +27,7 @@
  */
 
 #include "game.h"
-#include "net-serv.h"
+#include "net-lib.h"
 
 #include <stdio.h>
 #include <stdlib.h>
