@@ -12,8 +12,6 @@ void reader_init(line_reader_t *r, int fd)
 
 ssize_t reader_fill(line_reader_t *r)
 {
-    /* If the buffer is completely full without a newline the line is longer
-     * than we support; drop it to avoid a deadlock. */
     if (r->len >= sizeof(r->buf))
         r->len = 0;
 
@@ -59,7 +57,6 @@ int reader_getline_blocking(line_reader_t *r, char *out, size_t out_size)
         ssize_t n = reader_fill(r);
         if (n == 0)
         {
-            /* EOF: flush any trailing line that had no '\n'. */
             if (r->len > 0)
             {
                 size_t copy = r->len;

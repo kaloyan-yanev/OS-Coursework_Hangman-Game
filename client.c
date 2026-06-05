@@ -15,7 +15,6 @@
 
 #define LINE_MAX_LEN 1024
 
-/* Print a "a, b, c" list out of the compact "a,b,c" / "-" form. */
 static void print_incorrect(const char *inc)
 {
     if (strcmp(inc, "-") == 0)
@@ -40,7 +39,6 @@ static void print_state(const char *masked, const char *inc)
 
 static void print_result(const char *line)
 {
-    /* line is "RESULT <code> <you> <opp>" (without the RESULT prefix here). */
     char code[16] = "", you[64] = "", opp[64] = "";
     sscanf(line, "%15s %63s %63s", code, you, opp);
 
@@ -62,7 +60,6 @@ static void print_result(const char *line)
     fflush(stdout);
 }
 
-/* Read a single guessed character from stdin, skipping whitespace. */
 static int read_guess_char(void)
 {
     int c;
@@ -89,7 +86,6 @@ int main(int argc, char **argv)
 
     signal(SIGPIPE, SIG_IGN);
 
-    /* Resolve host:port and connect. */
     struct addrinfo hints, *res, *rp;
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
@@ -120,7 +116,6 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    /* Submit the word our opponent will have to guess. */
     char wbuf[LINE_MAX_LEN];
     snprintf(wbuf, sizeof(wbuf), "%s\n", word);
     send_str(fd, wbuf);
@@ -130,7 +125,7 @@ int main(int argc, char **argv)
 
     char line[LINE_MAX_LEN];
 
-    /* ── Guessing loop ────────────────────────────────────────────────── */
+
     bool solved = false;
     while (!solved)
     {
@@ -159,14 +154,13 @@ int main(int argc, char **argv)
 
             if (strchr(masked, '_') == NULL)
             {
-                /* Word fully revealed: stop guessing, wait for the result. */
                 solved = true;
                 break;
             }
 
             int c = read_guess_char();
             if (c == EOF)
-                return 0; /* stdin exhausted */
+                return 0; 
 
             char gbuf[4];
             gbuf[0] = (char) c;
@@ -179,11 +173,9 @@ int main(int argc, char **argv)
             print_result(line + 7);
             return 0;
         }
-        /* anything else is ignored */
     }
 
-    /* ── Wait for the end-of-game result ──────────────────────────────── */
-    for (;;)
+    while (1)
     {
         int rl = reader_getline_blocking(&reader, line, sizeof(line));
         if (rl <= 0)

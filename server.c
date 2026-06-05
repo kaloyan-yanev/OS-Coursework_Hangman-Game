@@ -1,31 +1,3 @@
-/*
- * hangman-server : the referee for a game of "competitive hangman".
- *
- * Usage:   ./hangman-server <port>
- *
- * The server listens on 0.0.0.0:<port>, waits for exactly two clients, holds
- * both secret words, processes guesses from both players concurrently and,
- * once both players have fully revealed the word they were guessing, decides
- * the winner (the player with fewer incorrect guesses) and reports the result.
- *
- * Communication protocol (line based, one '\n'-terminated message per line):
- *
- *   client -> server (once, right after connecting):
- *       <word>\n                 the word the OPPONENT will have to guess
- *
- *   client -> server (repeatedly):
- *       <letter>\n               a single guessed letter
- *
- *   server -> client:
- *       ERR <text>\n             invalid word, the connection is then closed
- *       STATE <masked> <inc>\n   current view of the word being guessed
- *       RESULT <code> <you> <opp>\n   game over (code = WIN | LOSE | TIE)
- *
- *   <masked> shows correctly guessed letters in place and '_' for the rest,
- *            so the full secret word is NEVER transmitted.
- *   <inc>    is a comma separated list of wrong letters, or "-" when empty.
- */
-
 #include "game.h"
 #include "net-lib.h"
 
@@ -48,14 +20,12 @@ typedef struct player
 {
     int fd;
     line_reader_t reader;
-    secret_word_t target;     /* the word THIS player has to guess          */
-    char incorrect[27];       /* wrong letters, in the order they were tried */
+    secret_word_t target;     
+    char incorrect[27];       
     int incorrect_len;
     bool solved;
 } player_t;
 
-/* A word is valid if it is non-empty and made up only of letters. This mirrors
- * the rules enforced by secret_word_init_from_buffer_and_size in game.c. */
 static bool word_is_valid(const char *w)
 {
     if (w == NULL || w[0] == '\0')
@@ -68,7 +38,6 @@ static bool word_is_valid(const char *w)
     return true;
 }
 
-/* Build the masked representation: revealed letters in place, '_' otherwise. */
 static void build_masked(const secret_word_t *w, char *out)
 {
     for (size_t i = 0; i < w->word_length; i++)
@@ -82,7 +51,6 @@ static void build_masked(const secret_word_t *w, char *out)
     out[w->word_length] = '\0';
 }
 
-/* Format the ordered list of incorrect guesses as "a,b,c" or "-" if empty. */
 static void format_incorrect(const player_t *p, char *out, size_t out_size)
 {
     if (p->incorrect_len == 0)
@@ -117,7 +85,6 @@ static void process_guess(player_t *p, const char *line)
     if (p->solved)
         return;
 
-    /* Pick the first usable letter from the line the client sent. */
     char guess = 0;
     for (size_t i = 0; line[i] != '\0'; i++)
     {
@@ -129,7 +96,6 @@ static void process_guess(player_t *p, const char *line)
     }
     if (guess == 0)
     {
-        /* Nothing guessable: simply repeat the current state. */
         send_state(p);
         return;
     }
@@ -178,7 +144,6 @@ int main(int argc, char **argv)
 
     int port = atoi(argv[1]);
 
-    /* Writing to a socket whose peer has gone away must not kill us. */
     signal(SIGPIPE, SIG_IGN);
 
     int listen_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -194,7 +159,7 @@ int main(int argc, char **argv)
     struct sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = htonl(INADDR_ANY); /* always listen on 0.0.0.0 */
+    addr.sin_addr.s_addr = htonl(INADDR_ANY); 
     addr.sin_port = htons((uint16_t) port);
 
     if (bind(listen_fd, (struct sockaddr *) &addr, sizeof(addr)) < 0)
@@ -211,7 +176,7 @@ int main(int argc, char **argv)
     printf("Listening on %d...\n", port);
     fflush(stdout);
 
-    /* ── Accept exactly two clients that submit a valid word ──────────── */
+
     player_t players[2];
     char words[2][MAX_WORD];
     int got = 0;
@@ -240,7 +205,7 @@ int main(int argc, char **argv)
         }
 
         players[got].fd = cfd;
-        players[got].reader = r;            /* keep any already buffered bytes */
+        players[got].reader = r;            
         size_t wl = strlen(wordbuf);
         if (wl > MAX_WORD - 1)
             wl = MAX_WORD - 1;
@@ -249,10 +214,8 @@ int main(int argc, char **argv)
         got++;
     }
 
-    /* Two players are in: stop accepting new connections. */
     close(listen_fd);
 
-    /* Each player guesses the word submitted by the OTHER player. */
     if (!secret_word_init_from_c_string(&players[0].target, words[1]) ||
         !secret_word_init_from_c_string(&players[1].target, words[0]))
     {
@@ -266,16 +229,12 @@ int main(int argc, char **argv)
         players[i].solved = false;
     }
 
-    /* Kick off both clients with the initial (all hidden) state. */
     send_state(&players[0]);
     send_state(&players[1]);
 
-    /* ── Main loop: handle guesses from both players concurrently ─────── */
     bool finished = false;
     while (!finished)
     {
-        /* First consume any complete lines already buffered (e.g. when a
-         * single read() delivered several messages at once). */
         for (int i = 0; i < 2; i++)
         {
             char line[MAX_WORD];
@@ -316,7 +275,6 @@ int main(int argc, char **argv)
                 ssize_t n = reader_fill(&players[i].reader);
                 if (n == 0)
                 {
-                    /* A client disconnected before the game ended. */
                     fprintf(stderr, "client disconnected, aborting game\n");
                     finished = true;
                     break;
@@ -346,7 +304,6 @@ int main(int argc, char **argv)
         }
     }
 
-    /* ── Clean up ─────────────────────────────────────────────────────── */
     secret_word_free(&players[0].target);
     secret_word_free(&players[1].target);
     close(players[0].fd);
