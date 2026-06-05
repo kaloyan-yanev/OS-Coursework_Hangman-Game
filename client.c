@@ -1,19 +1,3 @@
-/*
- * hangman-client : a player in a game of "competitive hangman".
- *
- * Usage:   ./hangman-client <host> <port> <opponent-word>
- *
- *   <host> / <port>   address of the hangman-server
- *   <opponent-word>   the word that OUR opponent will have to guess
- *
- * The client connects, submits the opponent's word, then repeatedly shows the
- * word it is itself guessing (masked) together with the wrong letters so far,
- * reads one guessed letter from stdin and sends it to the server. When the
- * word is fully revealed it waits for the final result from the server.
- *
- * The protocol is described in server.c.
- */
-
 #define _GNU_SOURCE
 
 #include "game.h"
@@ -62,11 +46,11 @@ static void print_result(const char *line)
 
     const char *message;
     if (strcmp(code, "WIN") == 0)
-        message = "You Win!";
+        message = "YOU WIN! :)";
     else if (strcmp(code, "LOSE") == 0)
-        message = "You Lose!";
+        message = "You Lose! :(";
     else
-        message = "Tie";
+        message = "Tie :/";
 
     printf("%s\n", message);
     printf("Your incorrect guesses: ");
